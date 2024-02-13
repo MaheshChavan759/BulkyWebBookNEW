@@ -1,0 +1,41 @@
+﻿@model Category
+
+
+<form method="post">
+   @*  <input asp-for="CategoryId" hidden/> *@
+    <div class="row pb-2">
+        <h2 class="text-primary">Edit Category </h2>
+        <hr />
+    </div>
+    <div class="mb-3 row">
+        <label asp-for="CategoryName"></label>
+        <input asp-for="CategoryName" class="form-control" />
+        <span asp-validation-for="CategoryName " class="text-danger"></span>
+    </div>
+    <div class="mb-3 row">
+        <label asp-for="DisplaeyCategoryOrder"></label>
+        <input asp-for="DisplaeyCategoryOrder" class="form-control" />
+        <span asp-validation-for="DisplaeyCategoryOrder" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <button type="submit" class="btn btn-primary form-control border">
+                Update Category
+            </button>
+        </div>
+        <div class="col-6">
+
+            <a asp-controller="Category" asp-action="Index"
+               class="btn btn-secondary form-control border">
+                Back To List
+            </a>
+        </div>
+    </div>
+
+</form>
+
+@section Scripts {
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+}
