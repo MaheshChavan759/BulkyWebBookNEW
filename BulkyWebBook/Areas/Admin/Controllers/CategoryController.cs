@@ -9,7 +9,7 @@ namespace BulkyWebBook.Areas.Admin.Controllers
 {
     [Area("Admin")]
 
-    [Authorize(Roles = SD.Role_Admin)]
+    //[Authorize(Roles = SD.Role_Admin)]
     public class CategoryController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -47,17 +47,23 @@ namespace BulkyWebBook.Areas.Admin.Controllers
             {
                 return NotFound();
             }
-            Category CategoryFromDb = _unitOfWork.category.Get(u => u.CategoryId == CategoryID);
+            //Category CategoryFromDb = _unitOfWork.category.Get(u => u.CategoryId == CategoryID);
             //Category CategoryFromDb1 = _db.Categories.FirstOrDefault(u=> u.CategoryId==CategoryID);
             //Category CategoryFromDb2= _db.Categories.Where(u=>u.CategoryId==CategoryID).FirstOrDefault();   
 
-            if (CategoryFromDb == null)
+            List<Category> cat = (List<Category>)_unitOfWork.category.GetAll();
+
+            Category cats = cat.FirstOrDefault(u => u.CategoryId == CategoryID);
+
+                
+
+            if (cats == null)
             {
                 return NotFound();
             }
 
 
-            return View(CategoryFromDb);
+            return View(cats);
         }
 
         [HttpPost]

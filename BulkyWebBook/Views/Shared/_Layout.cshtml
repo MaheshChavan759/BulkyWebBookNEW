@@ -31,8 +31,8 @@
                        @*  <li class="nav-item">
                             <a class="nav-link "  asp-area="Admin" asp-controller="Category" asp-action="Index">Category</a>
                         </li> *@
-                        @if (User.IsInRole(SD.Role_Admin))
-                        {
+                        @* @if (User.IsInRole(SD.Role_Admin)) *@
+                        
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Dropdown Items
@@ -49,7 +49,7 @@
                                     </li>
                                 </ul>
                             </li>
-                        }
+                        
                     </ul>
                     <partial name="_LoginPartial"/>
                 </div>
