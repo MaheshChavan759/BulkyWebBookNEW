@@ -26,8 +26,17 @@ namespace BulkyWebBook.Areas.Customer.Controllers
 
         public IActionResult Details( int id )
         {
-            Product ProductList = _unitOfWork.Product.Get(u=>u.Id==id,includeproperties: "Category");
-            return View(ProductList);
+            //Product ProductList = _unitOfWork.Product.Get(u=>u.Id==id,includeproperties: "Category");
+            //return View(ProductList);
+
+
+            List<Product> Prod = (List<Product>)_unitOfWork.Product.GetAll();
+
+            Product ProdObj = Prod.FirstOrDefault(u => u.Id == id);
+
+            return View(ProdObj);
+
+
         }
 
         public IActionResult Privacy()
