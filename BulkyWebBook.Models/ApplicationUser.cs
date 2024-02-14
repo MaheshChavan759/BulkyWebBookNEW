@@ -19,9 +19,9 @@ namespace BulkyWebBook.Models
         public string? State { get; set; }
         public string? PostalCode { get; set; }
 
-        public int? Id { get; set; }
+        public int? CompanyId { get; set; }
 
-        [ForeignKey("Id")]
+        [ForeignKey("CompanyId")]
         [ValidateNever]
         public Company company { get; set; }
     }

@@ -117,6 +117,10 @@ namespace BulkyWebBook.Areas.Identity.Pages.Account
             public IEnumerable<SelectListItem> RoleList { get; set; }
 
 
+
+            public int? CompanyId { get; set; }
+
+
             public string? Name { get; set; }
             public string? City { get; set; }
             public string? StreetAddress { get; set; }
@@ -175,6 +179,11 @@ namespace BulkyWebBook.Areas.Identity.Pages.Account
                 user.City = Input.City;
                 user.State = Input.State;
                 user.PostalCode = Input.PostalCode;
+
+               if(Input.Role==SD.Role_Company)
+                
+                { user.CompanyId = Input.CompanyId; }
+                
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
                 if (result.Succeeded)
