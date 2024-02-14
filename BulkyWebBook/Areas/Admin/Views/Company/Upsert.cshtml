@@ -1,0 +1,92 @@
+﻿@model Company
+
+<div class="card-body p-4">
+    <div class="row pb-2">
+        <h2 class="text-primary"> @(Model.Id != 0 ? "Update  " : "Create  ") Company</h2>
+        <hr />
+    </div>
+    
+    <div class="card-body p-4">
+        <form method="post" class="row" enctype="multipart/form-data">
+           
+            <input  asp-for="Id" hidden/>
+          
+
+            <div class="row">
+
+                <div class="col-10">
+                    <div class="card-body p-4">
+                        <div class="mb-3 row">
+                            <label asp-for="Name"></label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="StreetAddress"></label>
+                            <input asp-for="StreetAddress" class="form-control" />
+                            <span asp-validation-for="StreetAddress" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="City"></label>
+                            <input asp-for="City" class="form-control" />
+                            <span asp-validation-for="City" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="State"></label>
+                            <input asp-for="State" class="form-control" />
+                            <span asp-validation-for="State" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="PostalCode"></label>
+                            <input asp-for="PostalCode" class="form-control" />
+                            <span asp-validation-for="PostalCode" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="Country"></label>
+                            <input asp-for="Country" class="form-control" />
+                            <span asp-validation-for="Country" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3 row">
+                            <label asp-for="Phone"></label>
+                            <input asp-for="Phone" class="form-control" />
+                            <span asp-validation-for="Phone" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                @if (Model.Id != 0)
+                                {
+                                    <button type="submit" class="btn btn-primary form-control border">
+                                        Update Company
+                                    </button>
+                                }
+
+                                else
+                                {
+                                    <button type="submit" class="btn btn-primary form-control border">
+                                        Create Company
+                                    </button>
+                                }
+                            </div>
+                            <div class="col-6">
+                                <a asp-controller="Company" asp-action="Index"
+                                   class="btn btn-secondary form-control border">
+                                    Back To List
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+@section Scripts {
+    @{
+        <partial name="_ValidationScriptsPartial" />
+    }
+}
