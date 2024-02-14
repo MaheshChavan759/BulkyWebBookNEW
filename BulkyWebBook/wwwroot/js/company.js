@@ -9,6 +9,7 @@ function loadDataTable() {
     dataTable = $('#company').DataTable({
         "ajax": { url:'/admin/company/getall'},
         "columns": [
+           
             { data: 'name' , "width":"10%"},
             { data: 'streetAddress' ,"width": "10%" },
             { data: 'city' ,"width": "10%" },

@@ -51,9 +51,19 @@ namespace BulkyWebBook.Areas.Admin.Controllers
 
 
 
-                Company company = _unitOfWork.Company.Get(u => u.Id == id);
+                //Company company = _unitOfWork.Company.Get(u => u.Id == id);
 
-                return View(company);
+
+                List<Company> comp = (List<Company>)_unitOfWork.Company.GetAll();
+
+                Company companyobj = comp.FirstOrDefault(u=>u.Id == id);
+
+
+                return View(companyobj);
+         
+
+
+                //return View(company);
             }
         }
 
