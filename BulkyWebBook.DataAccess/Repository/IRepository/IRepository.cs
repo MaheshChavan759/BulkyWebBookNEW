@@ -16,7 +16,7 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
 
         //For Return Single Category 
 
-        T Get(Expression<Func<T, bool>> filter, string? includeproperties = null);
+        T Get(Expression<Func<T, bool>> filter, string? includeproperties = null,bool tracked = false);
 
         void Add(T entity);
 

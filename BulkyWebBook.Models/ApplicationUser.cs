@@ -12,6 +12,9 @@ namespace BulkyWebBook.Models
 {
     public class ApplicationUser : IdentityUser
     {
+
+        
+        //public int ApplicationuserId { get; set; }
         [Required]
         public string? Name { get; set; }
         public string? City { get; set; }

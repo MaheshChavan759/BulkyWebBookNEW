@@ -4,17 +4,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BulkyWebBook.DataAccess.Data
 {
-    public class ApplicationDbContext:IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
         }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
-
         public DbSet<Company> Companies { get; set; }
+        public DbSet<ShoppingCart> shoppingCarts { get; set; }
 
-        public DbSet<ApplicationUser> applicationUsers{ get; set; }
+        //public DbSet<ShoppingCart> shoppingCarts { get; set; }
+        public DbSet<ApplicationUser> applicationUsers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -26,14 +27,16 @@ namespace BulkyWebBook.DataAccess.Data
                 );
 
             modelBuilder.Entity<Product>().HasData(
-               new Product { Id=1,
-                   Title="Powerful",
-                   Description="At main man",
-                   Author= "The Don",
-                   ListPrise= 10000,
+               new Product
+               {
+                   Id = 1,
+                   Title = "Powerful",
+                   Description = "At main man",
+                   Author = "The Don",
+                   ListPrise = 10000,
                    Prise50 = 8700,
-                   Prise100=5000,
-                   CategoryId=1,
+                   Prise100 = 5000,
+                   CategoryId = 1,
                    ImageUrl = ""
                },
                new Product
@@ -46,8 +49,8 @@ namespace BulkyWebBook.DataAccess.Data
                    Prise50 = 8700,
                    Prise100 = 5000,
                    CategoryId = 2,
-                   ImageUrl=""
-                   
+                   ImageUrl = ""
+
                }
                 );
         }

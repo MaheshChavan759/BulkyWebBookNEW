@@ -9,10 +9,11 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
     public interface IUnitOfWork 
     {
         IcategoryRepository category { get; }
-
         IProductRepository Product { get; }
-
        ICompanyRepository  Company { get; }
+        IShoppingCartRepository ShoppingCart { get; }
+
+        IApplicationUserRepository ApplicationUser { get; }
 
         void Save();
     }

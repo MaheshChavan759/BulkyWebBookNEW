@@ -1,7 +1,10 @@
+using BulkyWebBook.DataAccess.Data;
 using BulkyWebBook.DataAccess.Repository.IRepository;
 using BulkyWebBook.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace BulkyWebBook.Areas.Customer.Controllers
 {
@@ -28,15 +31,59 @@ namespace BulkyWebBook.Areas.Customer.Controllers
         {
             //Product ProductList = _unitOfWork.Product.Get(u=>u.Id==id,includeproperties: "Category");
             //return View(ProductList);
-
+            //      List<Product> Prod = (List<Product>)_unitOfWork.Product.GetAll();
+            //      Product ProdObj = Prod.FirstOrDefault(u => u.Id == id);
+            //ShoppingCart cart = new() { ProductId = id,Count=1 };
+            //return View(cart);
 
             List<Product> Prod = (List<Product>)_unitOfWork.Product.GetAll();
-
             Product ProdObj = Prod.FirstOrDefault(u => u.Id == id);
 
-            return View(ProdObj);
+            if (ProdObj != null)
+            {
+                ShoppingCart cart = new ShoppingCart
+                {
+                    ProductId = ProdObj.Id,
+                    Count = 1,
+                    product = ProdObj
+                };
+                return View(cart);
+            }
+            else
+            {
+                return RedirectToAction("ProductNotFound");
+            }
+        }
 
+        [HttpPost]
+        [Authorize]
+        public IActionResult Details(ShoppingCart shoppingCart)
+        {
+            // Retrieve the user ID from the claims
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
 
+            // Set the user ID and ensure the ID property is not explicitly set
+            shoppingCart.ApplicationUserId = userId;
+            shoppingCart.Id = 0; // Assuming ID is the identity column, set it to 0 to let the database generate a new value.
+
+            List<ShoppingCart> SHOP = (List<ShoppingCart>)_unitOfWork.ShoppingCart.GetAll();
+            ShoppingCart SHOPObj = SHOP.FirstOrDefault(u => u.ApplicationUserId == userId && u.ProductId == shoppingCart.ProductId);
+
+            if (SHOPObj != null)
+            {
+                SHOPObj.Count += shoppingCart.Count;
+                _unitOfWork.ShoppingCart.update(SHOPObj);
+            }
+            else
+            {
+                _unitOfWork.ShoppingCart.Add(shoppingCart);
+            }
+            // Save changes to the database
+            _unitOfWork.Save();
+
+            // Redirect to the index action
+            return RedirectToAction(nameof(Index));
         }
 
         public IActionResult Privacy()

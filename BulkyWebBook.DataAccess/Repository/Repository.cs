@@ -30,22 +30,45 @@ namespace BulkyWebBook.DataAccess.Repository
             dbset.Add(entity);
         }
 
-        public T Get(Expression<Func<T, bool>> filter, string? includeproperties = null)
+        public T Get(Expression<Func<T, bool>> filter, string? includeproperties = null, bool tracked = false)
         {
-            IQueryable<T> query = dbset;
-            query.Where(filter);
-            if (!string.IsNullOrEmpty(includeproperties))
-            {
-                foreach (var item in includeproperties
-                    .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
 
+            if (tracked)
+            {
+                IQueryable<T> query = dbset.AsNoTracking();
+                query.Where(filter);
+                if (!string.IsNullOrEmpty(includeproperties))
                 {
-                    query = query.Include(item);
+                    foreach (var item in includeproperties
+                        .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+
+                    {
+                        query = query.Include(item);
+                    }
                 }
+
+                return query.FirstOrDefault();
+            }
+            else {
+
+                IQueryable<T> query = dbset.AsNoTracking();
+                query.Where(filter);
+                if (!string.IsNullOrEmpty(includeproperties))
+                {
+                    foreach (var item in includeproperties
+                        .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+
+                    {
+                        query = query.Include(item);
+                    }
+                }
+
+                return query.FirstOrDefault();
             }
 
-            return query.FirstOrDefault();
+
         }
+        
 
 
         //Category , CoverType User want to include
