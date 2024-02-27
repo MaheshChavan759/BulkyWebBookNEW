@@ -26,5 +26,8 @@ namespace BulkyWebBook.Models
         [ValidateNever]
         public string ApplicationUserId { get; set; }
 
+        [NotMapped]
+        public double Prise { get; set; }
+
     }
 }

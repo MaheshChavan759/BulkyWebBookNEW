@@ -12,11 +12,11 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
         //T-category 
 
         // For Return All Category 
-        IEnumerable<T> GetAll(string? includeproperties = null);
+        IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter = null,string? includeproperties = null);
 
         //For Return Single Category 
 
-        T Get(Expression<Func<T, bool>> filter, string? includeproperties = null,bool tracked = false);
+        T Get(Expression<Func <T, bool > > filter, string? includeproperties = null,bool tracked = false);
 
         void Add(T entity);
 

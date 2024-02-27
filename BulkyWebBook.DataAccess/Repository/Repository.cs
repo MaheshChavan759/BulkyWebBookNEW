@@ -30,7 +30,7 @@ namespace BulkyWebBook.DataAccess.Repository
             dbset.Add(entity);
         }
 
-        public T Get(Expression<Func<T, bool>> filter, string? includeproperties = null, bool tracked = false)
+        public T Get(Expression<Func <T, bool> > filter, string? includeproperties = null, bool tracked = false)
         {
 
             if (tracked)
@@ -52,7 +52,7 @@ namespace BulkyWebBook.DataAccess.Repository
             else {
 
                 IQueryable<T> query = dbset.AsNoTracking();
-                query.Where(filter);
+                query = query.Where(filter);
                 if (!string.IsNullOrEmpty(includeproperties))
                 {
                     foreach (var item in includeproperties
@@ -72,10 +72,13 @@ namespace BulkyWebBook.DataAccess.Repository
 
 
         //Category , CoverType User want to include
-        public IEnumerable<T> GetAll( string? includeproperties = null)
+        public IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter, string? includeproperties = null)
         {
             IQueryable<T> query = dbset;
-            if(!string.IsNullOrEmpty(includeproperties))
+            if(filter != null) { 
+            query = query.Where(filter);
+            }
+            if (!string.IsNullOrEmpty(includeproperties))
             {
                 foreach (var item in includeproperties
                     .Split(new char[] {','},StringSplitOptions.RemoveEmptyEntries))
