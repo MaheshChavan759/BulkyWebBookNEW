@@ -14,6 +14,9 @@ namespace BulkyWebBook.DataAccess.Data
         public DbSet<Company> Companies { get; set; }
         public DbSet<ShoppingCart> shoppingCarts { get; set; }
 
+        public DbSet<OrderHeader> OrderHeaders { get; set; }
+        public DbSet<OrderDetail> OrderDetails { get; set; }
+
         //public DbSet<ShoppingCart> shoppingCarts { get; set; }
         public DbSet<ApplicationUser> applicationUsers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)

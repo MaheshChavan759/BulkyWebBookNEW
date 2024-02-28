@@ -31,22 +31,50 @@ namespace BulkyWebBook.Areas.Customer.Controllers
             {
 
                 shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId,
-                includeproperties: "product")
+                includeproperties: "product"),
+                OrderHeader = new()
+                
             };
 
             foreach (var item in ShoppingCartVM.shoppingCartList)
             {
                 item.Prise = GetPriseBasedOnQuantity(item);
 
-                ShoppingCartVM.OrderTotal += item.Prise * item.Count;
+                ShoppingCartVM.OrderHeader.OrderTotal += item.Prise * item.Count;
             }
 
             return View(ShoppingCartVM);
         }
         public IActionResult Summary()
-        { 
-            return View();
-        
+        {
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+
+            ShoppingCartVM = new()
+            {
+                shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId,
+                includeproperties: "product"),
+                OrderHeader = new()
+
+            };
+            // We have tp Populate Application user Properties 
+            ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.Get(u=> u.Id == userId);
+
+            //Manually Updated All property
+            ShoppingCartVM.OrderHeader.Name = ShoppingCartVM.OrderHeader.ApplicationUser.Name;
+            ShoppingCartVM.OrderHeader.PhoneNumber = ShoppingCartVM.OrderHeader.ApplicationUser.PhoneNumber;
+            ShoppingCartVM.OrderHeader.StreetAddress = ShoppingCartVM.OrderHeader.ApplicationUser.StreetAddress;
+            ShoppingCartVM.OrderHeader.City = ShoppingCartVM.OrderHeader.ApplicationUser.City;
+            ShoppingCartVM.OrderHeader.State = ShoppingCartVM.OrderHeader.ApplicationUser.State;
+            ShoppingCartVM.OrderHeader.PostalCode = ShoppingCartVM.OrderHeader.ApplicationUser.PostalCode;
+
+            foreach (var item in ShoppingCartVM.shoppingCartList)
+            {
+                item.Prise = GetPriseBasedOnQuantity(item);
+
+                ShoppingCartVM.OrderHeader.OrderTotal += item.Prise * item.Count;
+            }
+            return View(ShoppingCartVM);
         }
 
         public IActionResult plus(int cartId)
