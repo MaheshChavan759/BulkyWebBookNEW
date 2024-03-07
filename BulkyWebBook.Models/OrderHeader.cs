@@ -31,7 +31,11 @@ namespace BulkyWebBook.Models
         //dateonly and time only -- ef core generate date only 
         public DateOnly PaymentDueDate { get; set; }
         // for paymnet from credit card and things 
-        public DateTime PaymentIntentId { get; set; }
+
+        // For sesstion create required session 
+
+        public string? SessionId { get; set; } 
+        public string? PaymentIntentId { get; set; }
         public string? Name { get; set; }
         public string? PhoneNumber { get; set; }
         public string? City { get; set; }

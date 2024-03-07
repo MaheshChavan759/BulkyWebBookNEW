@@ -11,5 +11,13 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
     {
         void update(OrderHeader obj);
         //void save();
+        // We waant to  update order status and paymentstatus based on Id 
+        //order status required and paytional status Optional 
+
+        void UpdateStatus(int id , string orderStatus, string? paymentStatus = null);
+
+        //based on orderheader id we can update stripe 
+
+        void UpdateStripePaymentId(int id , string sessionId, string stripePaymentId);
     }
 }

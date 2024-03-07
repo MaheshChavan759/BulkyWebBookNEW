@@ -13,7 +13,7 @@ namespace BulkyWebBook.DataAccess.Repository
     public class OrderHeaderRepository : Repository<OrderHeader>, IOrderHeaderRepository
     {
         private ApplicationDbContext _db;
-        public OrderHeaderRepository(ApplicationDbContext db): base(db)
+        public OrderHeaderRepository(ApplicationDbContext db) : base(db)
         {
             _db = db;
         }
@@ -25,6 +25,37 @@ namespace BulkyWebBook.DataAccess.Repository
         public void update(OrderHeader obj)
         {
             _db.OrderHeaders.Update(obj);
+        }
+        //bases on the id both retrive from database
+        //if the orderfromdb is not null then update the order status  and if payment status not null update the paymnet status 
+        public void UpdateStatus(int id, string orderStatus, string? paymentStatus = null)
+        {
+            var orderFromDb = _db.OrderHeaders.FirstOrDefault(u => u.Id == id);
+
+            if (orderFromDb != null)
+            {
+                orderFromDb.OrderStatus = orderStatus;
+                if (!string.IsNullOrEmpty(orderStatus))
+                {
+                    orderFromDb.PaymentStatus = paymentStatus;
+                }
+            }
+        }
+        // session id generated when user triyes o payment 
+        // if session genaerated  successful then a pyamnetintent id generated 
+        public void UpdateStripePaymentId(int id, string sessionId, string stripePaymentId)
+        {
+            var orderFromDb = _db.OrderHeaders.FirstOrDefault(u => u.Id == id);
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                orderFromDb.SessionId = sessionId;
+            }
+            if (!string.IsNullOrEmpty(stripePaymentId))
+            {
+                orderFromDb.PaymentIntentId = stripePaymentId;
+                orderFromDb.PaymentDate = DateTime.Now;
+            }
         }
     }
 }

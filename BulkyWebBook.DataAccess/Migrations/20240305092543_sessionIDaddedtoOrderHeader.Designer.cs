@@ -4,6 +4,7 @@ using BulkyWebBook.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BulkyWebBook.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240305092543_sessionIDaddedtoOrderHeader")]
+    partial class sessionIDaddedtoOrderHeader
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -163,8 +166,8 @@ namespace BulkyWebBook.DataAccess.Migrations
                     b.Property<DateOnly>("PaymentDueDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("PaymentIntentId")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime>("PaymentIntentId")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentStatus")
                         .HasColumnType("nvarchar(max)");

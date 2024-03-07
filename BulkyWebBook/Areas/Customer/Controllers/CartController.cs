@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Identity.Client;
+using SQLitePCL;
+using Stripe;
+using Stripe.Checkout;
 using System.Security.Claims;
 
 namespace BulkyWebBook.Areas.Customer.Controllers
@@ -37,7 +40,7 @@ namespace BulkyWebBook.Areas.Customer.Controllers
                 shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId,
                 includeproperties: "product"),
                 OrderHeader = new()
-                
+
             };
 
             foreach (var item in ShoppingCartVM.shoppingCartList)
@@ -62,7 +65,7 @@ namespace BulkyWebBook.Areas.Customer.Controllers
 
             };
             // We have tp Populate Application user Properties 
-            ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.Get(u=> u.Id == userId);
+            ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.Get(u => u.Id == userId);
 
             //Manually Updated All property
             ShoppingCartVM.OrderHeader.Name = ShoppingCartVM.OrderHeader.ApplicationUser.Name;
@@ -85,58 +88,75 @@ namespace BulkyWebBook.Areas.Customer.Controllers
 
         [HttpPost]
         [ActionName("Summary")]
-		public IActionResult SummaryPost()
-		{
-			var claimsIdentity = (ClaimsIdentity)User.Identity;
-			var userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+        public IActionResult SummaryPost()
+        {
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+
+            if (claimsIdentity == null)
+            {
+                // Handle the case where User.Identity is null
+                return RedirectToAction("Login", "Account"); // or any other appropriate action
+            }
+            var userIdClaim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
+            {
+                // Handle the case where userIdClaim is null or empty
+                return RedirectToAction("Login", "Account"); // or any other appropriate action
+            }
+
+            var userId = userIdClaim.Value;
 
             // as we get directly the shoppingcartVM from the bind property so  no need to explisitlyy use new here
 
-            ShoppingCartVM.shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId,
-                includeproperties: "product");
+            ShoppingCartVM.shoppingCartList = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId, includeproperties: "product");
 
-                // need to populate ordate data and userid.
+            // Other existing code...
+            // need to populate ordate data and userid.
 
-                ShoppingCartVM.OrderHeader.OrderDate = System.DateTime.Now;
+            ShoppingCartVM.OrderHeader.OrderDate = System.DateTime.Now;
             ShoppingCartVM.OrderHeader.ApplicationUserId = userId;
 
 
-			// We have tp Populate Application user Properties 
-			//520. never Populate the navigation property when you are trying to insert the record In the EF core always remembr
+            // We have tp Populate Application user Properties 
+            //520. never Populate the navigation property when you are trying to insert the record In the EF core always remembr
             // most likly the navigation property insert --populate 
-			//ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.Get(u => u.Id == userId);
+            //ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.Get(u => u.Id == userId);
 
-		      ApplicationUser ApplicationUser = _unitOfWork.ApplicationUser.Get(u => u.Id == userId);
+            ApplicationUser ApplicationUser = _unitOfWork.ApplicationUser.Get(u => u.Id == userId);
 
-
-
-			foreach (var item in ShoppingCartVM.shoppingCartList)
-			{
-				item.Prise = GetPriseBasedOnQuantity(item);
-
-				ShoppingCartVM.OrderHeader.OrderTotal += item.Prise * item.Count;
-			}
-
-			// With the help of Application user we can check the any company user associate with the user or not 
-			// here GetValueOrDefault used beacuse the companyID may be Null
-			// Now If The Company ID is null means the Customer is regukar so need to captue payment
-			// and if there is company id present meants --- for payment need to wait
-			// for company -companyID --present--- paymentstatus -->> PaymentstatusDElayedPayment and orderstatus Approved
-			// for Normal user ---companyID --0 ---- paymentstatus -->> Paymentstatuspending and orderstatus pending
-
-
-			if (ApplicationUser.CompanyId.GetValueOrDefault() == 0)
-
+            if (ApplicationUser == null)
             {
-                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
-                ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending; 
+                // Handle the case where ApplicationUser is null
+                return RedirectToAction("Error", "Home"); // or any other appropriate action
             }
 
+
+            foreach (var item in ShoppingCartVM.shoppingCartList)
+            {
+                item.Prise = GetPriseBasedOnQuantity(item);
+
+                ShoppingCartVM.OrderHeader.OrderTotal += item.Prise * item.Count;
+            }
+
+            // With the help of Application user we can check the any company user associate with the user or not 
+            // here GetValueOrDefault used beacuse the companyID may be Null
+            // Now If The Company ID is null means the Customer is regukar so need to captue payment
+            // and if there is company id present meants --- for payment need to wait
+            // for company -companyID --present--- paymentstatus -->> PaymentstatusDElayedPayment and orderstatus Approved
+            // for Normal user ---companyID --0 ---- paymentstatus -->> Paymentstatuspending and orderstatus pending
+
+
+            if (ApplicationUser.CompanyId.GetValueOrDefault() == 0)
+            {
+                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+                ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusPending;
+            }
             else
             {
-				ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
-				ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusApproved;
-			}
+                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
+                ShoppingCartVM.OrderHeader.OrderStatus = SD.StatusApproved;
+            }
             // now we can create the orderheader
 
             _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
@@ -153,32 +173,109 @@ namespace BulkyWebBook.Areas.Customer.Controllers
                     Count = item.Count
                 };
 
-				_unitOfWork.OrderDetail.Add(orderDetail);
+                _unitOfWork.OrderDetail.Add(orderDetail);
                 _unitOfWork.Save();
-			}
+            }
 
 
-			// Next step is to place Order 
+            // Next step is to place Order 
+            // To get All item we have to itrate it through shopping cart list
+            // session line item option -- we will configure the  prise and prise data --
+            // prise data is basically create new prise object 
+            // IN SessionLineItemPriceDataOptions we have to configure unit amout
+            //Here We have to add stripe LOGIC -- Which is done by user with card 
+            //Line item is basically have all Product Details 
+            // order confirmation method return --->> id so here model is ID
+            // 
+            if (ApplicationUser.CompanyId.GetValueOrDefault() == 0)
+            {
+                var domain = "https://localhost:7213";
 
-			if (ApplicationUser.CompanyId.GetValueOrDefault() == 0)
+                var successUrl = $"{domain}/customer/cart/OrderConfirmation?id={Uri.EscapeDataString(ShoppingCartVM.OrderHeader.Id.ToString())}";
+                var cancelUrl = $"{domain}/customer/cart/index";
 
-			{
-				// we will add the strip logic --- cpayment can done by card etc
-			}
+                var options = new Stripe.Checkout.SessionCreateOptions
+                {
+                    SuccessUrl = successUrl,
+                    CancelUrl = cancelUrl,
+                    LineItems = new List<SessionLineItemOptions>(),
+                    Mode = "payment",
+                };
 
-           
+                foreach (var item in ShoppingCartVM.shoppingCartList)
+                {
+                    var sessionLineItem = new SessionLineItemOptions
+                    {
+                        PriceData = new SessionLineItemPriceDataOptions
+                        {
+                            UnitAmount = (long)((decimal)item.Prise * 100), // Corrected typo in 'Prise' to 'Price'
+                            Currency = "usd",
+                            ProductData = new SessionLineItemPriceDataProductDataOptions
+                            {
+                                Name = item.product.Title,
+                            }
+                        },
+                        Quantity = item.Count
+                    };
+                    options.LineItems.Add(sessionLineItem);
+                }
 
-			return RedirectToAction(nameof(OrderConfirmation),new {id = ShoppingCartVM.OrderHeader.Id });
-		}
 
-        // order confirmation method return --->> id so here model is ID 
-        public IActionResult OrderConfirmation(int id )
-        {
 
-            return View(id);
-        
+                var service = new Stripe.Checkout.SessionService();
+                try
+                {
+                    Session session = service.Create(options);
+
+                    // Update the order with the Stripe Session ID
+                    _unitOfWork.OrderHeader.UpdateStripePaymentId(ShoppingCartVM.OrderHeader.Id, session.Id, session.PaymentIntentId );
+                    _unitOfWork.Save();
+
+                    // Redirect to the new URL from the session
+                    Response.Headers.Add("Location", session.Url);
+                    return new StatusCodeResult(303);
+                }
+                catch (StripeException stripeException)
+                {
+                    Console.WriteLine($"Stripe Exception: {stripeException.Message}");
+                    // Handle the exception as needed for your application
+                    return BadRequest("Error processing payment. Please try again.");
+                }
+            }
+            return RedirectToAction(nameof(OrderConfirmation), new { id = ShoppingCartVM.OrderHeader.Id });
         }
-		public IActionResult plus(int cartId)
+
+        //first based on Id get complete Orderheader
+        //once the order header we get then only care about the order header
+        // if the payment status not paymentstatusdelayed then the paymnet done by user/customer not the company 
+
+        //we have to check weather the payment done or not ---Payment  successful or not 
+        // For that we have to get back session and check the status
+        public IActionResult OrderConfirmation(int id)
+        {
+            OrderHeader orderHeader = _unitOfWork.OrderHeader.Get(u => u.Id == id, includeproperties: "ApplicationUser");
+            if(orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
+            {
+                // then this is order by Customer
+                // we have tp go and retrive the stripe session 
+
+                var service = new SessionService();
+                Session session = service.Get(orderHeader.SessionId);
+               // go to stipe ducumnetetion and check the enum
+                if(session.PaymentStatus.ToLower() =="paid" ) 
+                {
+                    //Here we get the paymentIntenetid
+                    _unitOfWork.OrderHeader.UpdateStripePaymentId(id, session.Id, session.PaymentIntentId );
+                    _unitOfWork.OrderHeader.UpdateStatus(id, SD.StatusApproved, SD.PaymentStatusApproved);
+                    _unitOfWork.Save();
+                }
+            }
+            List<ShoppingCart> shoppingCarts = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == orderHeader.ApplicationUserId).ToList();
+            _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
+            _unitOfWork.Save();
+            return View(id);
+        }
+        public IActionResult plus(int cartId)
         {
             var carFromDb = _unitOfWork.ShoppingCart.Get(u => u.Id == cartId);
             carFromDb.Count += 1;
