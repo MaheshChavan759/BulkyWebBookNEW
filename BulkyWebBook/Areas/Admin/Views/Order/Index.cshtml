@@ -1,0 +1,33 @@
+﻿
+@* here do not used model because data get from data table  *@
+
+<partial name="_Notification" />
+<div>
+    <div class="container">
+        <div class="row pt-2 pt-3">
+            <div class="col-6">
+                <h2 class="text-primary">
+                    Order List
+                </h2>
+            </div>
+        </div>
+        <div class="col-6 text-end">
+            <table id="tblTable" class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Phone Number</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Edit & Delete</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="~/js/order.js"></script>
+}
