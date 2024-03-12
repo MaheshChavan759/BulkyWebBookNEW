@@ -1,11 +1,8 @@
-﻿var dataTable;
+﻿    var dataTable;
 $(document).ready(function () {
     loadDataTable();
-
 });
-
 function loadDataTable() {
-
    dataTable =  $('#tblTable').DataTable({
         "ajax": { url:'/admin/order/getall'},
         "columns": [
@@ -19,8 +16,7 @@ function loadDataTable() {
                 data: 'id',
                 "render": function (data) {
                     return ` <div class="w-75 btn-group" role="group">
-                        <a href="/admin/product/upsert?id=${data}" class="btn btn-primary mx-2"> <i class="bi bi-pencil-square"></i>Edit</a>
-                        
+                        <a href="/admin/order/detsils?Orderid=${data}" class="btn btn-primary mx-2"> <i class="bi bi-pencil-square"></i>Edit</a>
                     </div>`
                 },"width":"25"
             }
