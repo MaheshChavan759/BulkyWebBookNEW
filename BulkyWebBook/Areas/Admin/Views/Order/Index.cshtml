@@ -7,42 +7,45 @@
 4) theser variable dynamically assign to li elemnet 
  *@
 
+
+
+
+
 @{
     var status = Context.Request.Query["status"];
-    var inprocess = "text-primary";
-    var pending = "text-primary";
-    var completed = "text-primary";
-    var approved = "text-primary";
+    var InProcess = "text-primary";
+    var Pending = "text-primary";
+    var Completed = "text-primary";
+    var Approved = "text-primary";
     var all = "text-primary";
 
     switch (status)
     {
         case "inprocess":
-            inprocess = "active text-white bg-primary";
+            InProcess = "active text-white bg-primary";
             break;
         case "pending":
-            pending = "active text-white bg-primary";
+            Pending = "active text-white bg-primary";
             break;
         case "completed":
-            completed = "active text-white bg-primary";
+            Completed = "active text-white bg-primary";
             break;
         case "approved":
-            approved = "active text-white bg-primary";
+            Approved = "active text-white bg-primary";
             break;
         default:
             all = "active text-white bg-primary";
             break;
     }
-
 }
+
 <partial name="_Notification" />
+
 <div>
     <div class="container">
         <div class="row pt-2 pt-3">
             <div class="col-6">
-                <h2 class="text-primary">
-                    Order List
-                </h2>
+                <h2 class="text-primary">Order List</h2>
             </div>
         </div>
         <div class="card-body p-4 ">
@@ -50,37 +53,33 @@
                 <span></span>
                 <ul class="list-group list-group-horizontal-sm">
                     <a style="text-decoration:none;" asp-controller="Order" asp-action="Index" asp-route-status="inprocess">
-                    <li class="list-group-item  @inprocess">In Progress</li></a>
+                    <li class="list-group-item @InProcess">In Progress</li>
+                    </a>
                 </ul>
 
                 <ul class="list-group list-group-horizontal-sm">
                     <a style="text-decoration:none;" asp-controller="Order" asp-action="Index" asp-route-status="pending">
-                    <li class="list-group-item  @pending">
-                        Payment Pending
-                    </li></a>
+                    <li class="list-group-item @Pending">Payment Pending</li>
+                    </a>
                 </ul>
 
                 <ul class="list-group list-group-horizontal-sm">
                     <a style="text-decoration:none;" asp-controller="Order" asp-action="Index" asp-route-status="completed">
-                    <li class="list-group-item @completed">
-                        Completed
-                    </li></a>
+                    <li class="list-group-item @Completed">Completed</li>
+                    </a>
                 </ul>
 
                 <ul class="list-group list-group-horizontal-sm">
                     <a style="text-decoration:none;" asp-controller="Order" asp-action="Index" asp-route-status="approved">
-                    <li class="list-group-item @approved">
-                        Approved
-                    </li></a>
+                    <li class="list-group-item @Approved">Approved</li>
+                    </a>
                 </ul>
 
                 <ul class="list-group list-group-horizontal-sm">
                     <a style="text-decoration:none;" asp-controller="Order" asp-action="Index" asp-route-status="all">
-                    <li class="list-group-item @all">
-                        All
-                    </li></a>
+                    <li class="list-group-item @all">All</li>
+                    </a>
                 </ul>
-
             </div>
 
             <table id="tblTable" class="table table-bordered table-striped">
@@ -96,11 +95,10 @@
                     </tr>
                 </thead>
             </table>
-
-
         </div>
     </div>
 </div>
+
 @section Scripts {
     <script src="~/js/order.js"></script>
 }

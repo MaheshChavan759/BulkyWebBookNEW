@@ -20,8 +20,10 @@ namespace BulkyWebBook.Utility
 		public const string StatusShipped = "Shipped";
 		public const string StatusCancelled = "Cancelled";
 		public const string StatusRefunded = "Refunded";
+        public const string StatusCompleted = "completed"; // Adjusted to match the case in your JavaScript code
+        public const string StatusAll = "all";
 
-		public const string PaymentStatusPending = "Pending";
+        public const string PaymentStatusPending = "Pending";
 		public const string PaymentStatusApproved = "Approved";
 		public const string PaymentStatusDelayedPayment = "ApprovedForDelayedPayment";
 		public const string PaymentStatusRejected = "Rejected";
