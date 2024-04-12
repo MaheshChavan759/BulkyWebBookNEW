@@ -4,7 +4,7 @@
 @* For Postion UPdateOrderDetails -- We get the orderheader in hidden Filed. *@
 
 <form method="post">
-    <input asp-for="OrderHeader.Id " hidden />
+    <input asp-for="@Model.OrderHeader.Id" hidden />
     <br />
     <div class="container">
         <div class="card">
@@ -129,7 +129,7 @@
                                 <div class="col-9">
                                     @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                                     {
-                                        <input asp-for="OrderHeader.Carrier" type="text" class="form-control" />
+                                        <input asp-for="OrderHeader.Carrier" id="Carrier"  type="text" class="form-control" />
                                     }
                                     else
                                     {
@@ -142,7 +142,7 @@
                                 <div class="col-9">
                                     @if (User.IsInRole(SD.Role_Admin) || User.IsInRole(SD.Role_Employee))
                                     {
-                                        <input asp-for="OrderHeader.TrackingNumber" type="text" class="form-control" />
+                                        <input asp-for="OrderHeader.TrackingNumber" id="TrackingNumber" type="text" class="form-control" />
                                     }
                                     else
                                     {
@@ -267,7 +267,7 @@
 
                             *@
 
-                            @if (Model.OrderHeader.PaymentStatus == SD.PaymentStatusPending &&
+                            @if (Model.OrderHeader.PaymentStatus == SD.PaymentStatusDelayedPayment &&
                             Model.OrderHeader.OrderStatus == SD.StatusShipped)
                             {
                                 <button type="submit" class="btn btn-success form-control my-1">Pay Now</button>
@@ -278,18 +278,21 @@
                             {
                                 @if (Model.OrderHeader.OrderStatus == SD.StatusApproved)
                                 {
-                                    <button type="submit" class="btn btn-primary form-control my-1">Start Processing</button>
+                                    <button type="submit" asp-action="StartProcessing"
+                                            class="btn btn-primary form-control my-1">
+                                        Start Processing
+                                    </button>
                                 }
                                 @if (Model.OrderHeader.OrderStatus == SD.StatusInProcess)
                                 {
 
-                                    <button type="submit" class="btn btn-primary form-control my-1">Ship Order</button>
+                                    <button type="submit" asp-action="ShiftOrder" onclick="return ValidateInput()" class="btn btn-primary form-control my-1">Ship Order</button>
                                 }
                                 @if (Model.OrderHeader.OrderStatus != SD.StatusRefunded &&
                                Model.OrderHeader.OrderStatus != SD.StatusCancelled &&
                                Model.OrderHeader.OrderStatus != SD.StatusShipped)
                                 {
-                                    <button type="submit" class="btn btn-danger form-control my-1">Cancel Order</button>
+                                    <button type="submit" asp-action="CancelOrder" class="btn btn-danger form-control my-1">Cancel Order</button>
                                 }
                             }
                         </div>
@@ -299,3 +302,27 @@
         </div>
     </div>
 </form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function ValidateInput() {
+            if (document.getElementById("TrackingNumber").value === "") {
+                alert("Tracking number is empty");
+            }
+            if (document.getElementById("Carrier").value === "") {
+                alert("Carrier is empty");
+            }
+        }
+    </script>
+
+    <script>
+        // Check if TempData contains a success message
+        var successMessage = '@TempData["Message"]';
+        if (successMessage !== '') {
+            // Display a pop-up message
+            alert(successMessage);
+        }
+    </script>
+}
+

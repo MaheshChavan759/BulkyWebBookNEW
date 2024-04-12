@@ -4,12 +4,14 @@ using BulkyWebBook.Models.ViewModels;
 using BulkyWebBook.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 using System.Diagnostics;
 using System.Security.Claims;
 
 namespace BulkyWebBook.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize]
     public class OrderController : Controller
     {
         //We need to add Unit Of Work 
@@ -58,10 +60,6 @@ namespace BulkyWebBook.Areas.Admin.Controllers
         // So We will create the ViewModel Private Proverty and Then we get the OrderVM FRom
         // That We get the Order Header and Order Header 
 
-        // Now We have To Rtrive the OrderDetail FRom Database and want to update properties Explicitly
-       
-
-
         [HttpPost]
         [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
         public IActionResult UpdateOrderDetail(OrderVM orderVM)
@@ -103,6 +101,272 @@ namespace BulkyWebBook.Areas.Admin.Controllers
         }
 
 
+
+        // When Admin Hit the Start Processing Button then the ---- Order Status -- will be INprocess
+        // Now Addd the start processing Action Method 
+        // then we  have to update the status
+        // then save 
+        // redirct to another method
+
+
+
+        // ************ Now We have To Rtrive the OrderDetail FRom Database and want to update properties Explicitly ***************
+
+        // ------------------------ *************** Below Are Condition Need to Work But NOt  *********************   -------------------------------
+        // 1) After Clicking StartProcession Order Status Will Be IN Process ----------
+        // 2) and Payment Status Will Be Approved
+        // 
+        // ********************************* For Shift Order *******************************
+
+        // 3) If carrier and Tracking Empty Then Will show Erroe on UI side 
+        // 4) once tracking  and Carried added and CLick On shit Button 
+        //   COntition 1 ) For Company User ------ a) order status b) payment Status c) Paymnet due date upated 
+        //                                          b) Show Pay Button ON UP 
+
+        // Condition 2) for Normal User --------  a) order status b) payment Status c) Paymnet due date upated 
+
+        // ****************************** Cancel Order ********************************
+
+        //***************************** Payment For Delayed ******************************
+        [HttpPost]
+        [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
+        public IActionResult StartProcessing(OrderVM orderVM)
+        {
+            try
+            {
+                // Retrieve the order header from the database
+                var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+
+                if (orderHeaderFromDb == null)
+                {
+                    return NotFound("Order not found");
+                }
+
+                // Update payment status to "Approved"
+               //orderHeaderFromDb.PaymentStatus = SD.StatusApproved;
+
+                // Update order status to "In Process"
+                _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusInProcess, orderHeaderFromDb.PaymentStatus);
+
+                // Save changes to the database
+                _unitOfWork.Save();
+
+                // Redirect to the details page of the updated order
+                return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can replace Console.WriteLine with your preferred logging mechanism)
+                Console.WriteLine($"An error occurred: {ex.Message}");
+
+                // Return 500 Internal Server Error with a generic message to the user
+                return StatusCode(500, "An error occurred while processing the request. Please try again later.");
+            }
+        }
+
+        //Need To Create the shiftordermethod ----logic is must be populate the carrier and tracking number and order status changed
+        //1) First retrive Order From Database 
+        //2) Then Update the Tracking and Carrier 
+        //3) If the the order for the coompany then we have to give the payment due date  -- here if payment status is delayed payment then we have to update the paymnet due date.
+
+
+        [HttpPost]
+        [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
+        public IActionResult ShiftOrder(OrderVM orderVM)
+        {
+            try
+            {
+                if (orderVM == null || orderVM.OrderHeader == null)
+                {
+                    return BadRequest("Invalid order data");
+                }
+                var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+                if (orderHeaderFromDb == null)
+                {
+                    return NotFound("Order not found");
+                }
+                if (string.IsNullOrEmpty(orderVM.OrderHeader.TrackingNumber) || string.IsNullOrEmpty(orderVM.OrderHeader.Carrier))
+                {
+                    return BadRequest("Tracking number and carrier are required fields");
+                }
+                orderHeaderFromDb.TrackingNumber = orderVM.OrderHeader.TrackingNumber;
+                orderHeaderFromDb.Carrier = orderVM.OrderHeader.Carrier;
+                orderHeaderFromDb.OrderStatus = SD.StatusShipped;
+                orderHeaderFromDb.ShippingDate = DateTime.Now;
+                if (orderHeaderFromDb.PaymentStatus == SD.PaymentStatusDelayedPayment)
+                {
+                    orderHeaderFromDb.PaymentDueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(30));
+                }
+                _unitOfWork.OrderHeader.update(orderHeaderFromDb);
+                _unitOfWork.Save();
+                return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred: {ex.Message}");
+                return StatusCode(500, "An error occurred while processing the request. Please try again later.");
+            }
+        }
+
+
+        // Now We Want To Work On cancel order Button
+        //once click on cancel button the status must  update as cancel 
+        // Refend must prpcessed 
+        //Payment inten id also we get 
+        // First Retrive Order 
+        // First Check Payment Status If It is Approved then it means Payment Is Already Done. then we have to give refund
+        // inside stripe class have refend options. then call refend Service
+        // then update the status and save at database.
+        // if payment not done then directly cancel the order.
+
+
+
+        [HttpPost]
+        [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
+        public IActionResult CancelOrder(OrderVM orderVM)
+        {
+            try
+            {
+                var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+
+                if (orderHeaderFromDb == null)
+                {
+                    return NotFound(); // Handle case where order is not found
+                }
+
+                if (orderHeaderFromDb.PaymentStatus == SD.PaymentStatusApproved)
+                {
+                    var options = new RefundCreateOptions
+                    {
+                        Reason = RefundReasons.RequestedByCustomer,
+                        PaymentIntent = orderHeaderFromDb.PaymentIntentId
+                    };
+
+                    var service = new RefundService();
+                    Refund refund = service.Create(options);
+
+                    _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusRefunded);
+                }
+                else
+                {
+                    _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusCancelled);
+                }
+
+                _unitOfWork.Save();
+
+                // Add TempData message
+                TempData["Message"] = "Order has been cancelled.";
+
+                return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                // You might also want to return a specific view indicating the error to the user
+                // For simplicity, this example just returns a generic error view
+                TempData["ErrorMessage"] = "An error occurred while cancelling the order.";
+                return View("Error");
+            }
+        }
+
+
+
+        //[HttpPost]
+        //[Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
+        //public IActionResult CancelOrder(OrderVM orderVM)
+        //{
+        //    try
+        //    {
+        //        var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+
+        //        if (orderHeaderFromDb == null)
+        //        {
+        //            return NotFound(); // Handle case where order is not found
+        //        }
+
+        //        if (orderHeaderFromDb.PaymentStatus == SD.PaymentStatusApproved)
+        //        {
+        //            var options = new RefundCreateOptions
+        //            {
+        //                Reason = RefundReasons.RequestedByCustomer,
+        //                PaymentIntent = orderHeaderFromDb.PaymentIntentId
+        //            };
+
+        //            var service = new RefundService();
+        //            Refund refund = service.Create(options);
+
+        //            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusRefunded);
+        //        }
+        //        else
+        //        {
+        //            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusCancelled);
+        //        }
+
+        //        _unitOfWork.Save();
+
+        //        // Add TempData message
+        //        TempData["Message"] = "Order has been cancelled.";
+
+        //        return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log the exception
+        //        // You might also want to return a specific view indicating the error to the user
+        //        // For simplicity, this example just returns a generic error view
+        //        TempData["ErrorMessage"] = "An error occurred while cancelling the order.";
+        //        return View("Error");
+        //    }
+        //}
+
+
+
+        //[HttpPost]
+        //[Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
+        //public IActionResult CancelOrder(OrderVM orderVM)
+        //{
+        //    var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+
+        //    if(orderHeaderFromDb.PaymentStatus == SD.PaymentStatusApproved)
+        //    {
+        //        var options = new RefundCreateOptions {
+
+        //            Reason = RefundReasons.RequestedByCustomer,
+        //            PaymentIntent = orderHeaderFromDb.PaymentIntentId
+
+        //        };
+
+        //        var Service = new RefundService();
+        //        Refund refund = Service.Create(options);
+
+        //        _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id,SD.StatusCancelled,SD.StatusRefunded);
+
+
+        //    }
+
+        //    else
+        //    {
+
+        //        _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusCancelled);
+        //    }
+
+
+        //    _unitOfWork.Save();
+        //    return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
+
+        //}
+
+
+
+        // ------------------------------------  Below Are Condition Need to Work But NOt ------------------------------------------------------------------------------------
+        // 1) After Clicking StartProcession Order Status Will Be IN Process 
+        // 2) and Payment Status Will Be Approved 
+        // 3) If carrier and Tracking Empty Then Will show Erroe on UI side 
+        // 4) once tracking  and Carried added and CLick On shit Button 
+        //   COntition 1 ) For Company User ------ a) order status b) payment Status c) Paymnet due date upated 
+        //                                          b) Show Pay Button ON UP 
+
+        // Condition 2) for Normal User --------  a) order status b) payment Status c) Paymnet due date upated 
 
 
 
