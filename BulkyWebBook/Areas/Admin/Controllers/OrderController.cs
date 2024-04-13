@@ -5,6 +5,8 @@ using BulkyWebBook.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+using Stripe.Checkout;
+using Stripe.Climate;
 using System.Diagnostics;
 using System.Security.Claims;
 
@@ -23,7 +25,7 @@ namespace BulkyWebBook.Areas.Admin.Controllers
 
         public OrderController(IUnitOfWork unitOfWork)
         {
-                _unitOfWork = unitOfWork;
+            _unitOfWork = unitOfWork;
         }
 
         //Now We have to Diaplay All The drders in the index page
@@ -37,9 +39,9 @@ namespace BulkyWebBook.Areas.Admin.Controllers
         //order header ---> information about the user --- so include the application user property 
         // orderdetails -->>> information about the order and order may be more than one also -- so include the prodct property 
 
-        public IActionResult Details( int orderId)
+        public IActionResult Details(int orderId)
         {
-            
+
             //once view model propery created then no need to create new OrderVM 
             OrderVM orderVM = new OrderVM();
 
@@ -143,7 +145,7 @@ namespace BulkyWebBook.Areas.Admin.Controllers
                 }
 
                 // Update payment status to "Approved"
-               //orderHeaderFromDb.PaymentStatus = SD.StatusApproved;
+                //orderHeaderFromDb.PaymentStatus = SD.StatusApproved;
 
                 // Update order status to "In Process"
                 _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusInProcess, orderHeaderFromDb.PaymentStatus);
@@ -271,90 +273,115 @@ namespace BulkyWebBook.Areas.Admin.Controllers
 
 
 
-        //[HttpPost]
-        //[Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
-        //public IActionResult CancelOrder(OrderVM orderVM)
-        //{
-        //    try
-        //    {
-        //        var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
+        // Now We Have To Work on Delayed Payment. if order shifted by Company then they need to do paymnet.
+        //create post action method -- on details method
+        // As we are Postion So we need to Populate the Order Header and Order Details.
 
-        //        if (orderHeaderFromDb == null)
-        //        {
-        //            return NotFound(); // Handle case where order is not found
-        //        }
+        // After Get THe Order Header And Order Details Let Work With The Stripe Payment --->>
 
-        //        if (orderHeaderFromDb.PaymentStatus == SD.PaymentStatusApproved)
-        //        {
-        //            var options = new RefundCreateOptions
-        //            {
-        //                Reason = RefundReasons.RequestedByCustomer,
-        //                PaymentIntent = orderHeaderFromDb.PaymentIntentId
-        //            };
-
-        //            var service = new RefundService();
-        //            Refund refund = service.Create(options);
-
-        //            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusRefunded);
-        //        }
-        //        else
-        //        {
-        //            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusCancelled);
-        //        }
-
-        //        _unitOfWork.Save();
-
-        //        // Add TempData message
-        //        TempData["Message"] = "Order has been cancelled.";
-
-        //        return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log the exception
-        //        // You might also want to return a specific view indicating the error to the user
-        //        // For simplicity, this example just returns a generic error view
-        //        TempData["ErrorMessage"] = "An error occurred while cancelling the order.";
-        //        return View("Error");
-        //    }
-        //}
+        // Create New Page For Payment Confiramation 
 
 
 
-        //[HttpPost]
-        //[Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
-        //public IActionResult CancelOrder(OrderVM orderVM)
-        //{
-        //    var orderHeaderFromDb = _unitOfWork.OrderHeader.Get(u => u.Id == orderVM.OrderHeader.Id);
 
-        //    if(orderHeaderFromDb.PaymentStatus == SD.PaymentStatusApproved)
-        //    {
-        //        var options = new RefundCreateOptions {
+        [ActionName("Details")]
+        [HttpPost]
+       public IActionResult Details_Pay_Now_company(int orderId)
+        {
+            OrderVM orderVM = new OrderVM();
+            orderVM.OrderHeader = _unitOfWork.OrderHeader.Get(u => u.Id == orderId, includeproperties: "ApplicationUser");
+            if (orderVM.OrderHeader == null)
+            {
+                return NotFound(); // Return a 404 Not Found response if the order is not found
+            }
+            orderVM.OrderDetails = _unitOfWork.OrderDetail.GetAll(u => u.OrderHeaderId == orderId, includeproperties: "product");
+            var domain = "https://localhost:7213";
+            var successUrl = $"{domain}/admin/order/PaymentConfirmation?id={Uri.EscapeDataString(orderVM.OrderHeader.Id.ToString())}";
+            var cancelUrl = $"{domain}/admin/order/details?id={Uri.EscapeDataString(orderVM.OrderHeader.Id.ToString())}";
 
-        //            Reason = RefundReasons.RequestedByCustomer,
-        //            PaymentIntent = orderHeaderFromDb.PaymentIntentId
+            var options = new Stripe.Checkout.SessionCreateOptions
+            {
+                SuccessUrl = successUrl,
+                CancelUrl = cancelUrl,
+                LineItems = new List<SessionLineItemOptions>(),
+                Mode = "payment",
+            };
 
-        //        };
+            foreach (var item in orderVM.OrderDetails)
+            {
+                var sessionLineItem = new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        UnitAmount = (long)((decimal)item.Prise * 100), // Corrected typo in 'Prise' to 'Price'
+                        Currency = "usd",
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = item.product.Title,
+                        }
+                    },
+                    Quantity = item.Count
+                };
+                options.LineItems.Add(sessionLineItem);
+            }
 
-        //        var Service = new RefundService();
-        //        Refund refund = Service.Create(options);
-
-        //        _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id,SD.StatusCancelled,SD.StatusRefunded);
 
 
-        //    }
+            var service = new Stripe.Checkout.SessionService();
+            try
+            {
+                Session session = service.Create(options);
 
-        //    else
-        //    {
+                // Update the order with the Stripe Session ID
+                _unitOfWork.OrderHeader.UpdateStripePaymentId(orderVM.OrderHeader.Id, session.Id, session.PaymentIntentId);
+                _unitOfWork.Save();
 
-        //        _unitOfWork.OrderHeader.UpdateStatus(orderHeaderFromDb.Id, SD.StatusCancelled, SD.StatusCancelled);
-        //    }
+                // Redirect to the new URL from the session
+                Response.Headers.Add("Location", session.Url);
+                return new StatusCodeResult(303);
+            }
+            catch (StripeException stripeException)
+            {
+                Console.WriteLine($"Stripe Exception: {stripeException.Message}");
+                // Handle the exception as needed for your application
+                return BadRequest("Error processing payment. Please try again.");
+            }
+
+           
+        }
 
 
-        //    _unitOfWork.Save();
-        //    return RedirectToAction(nameof(Details), new { orderId = orderHeaderFromDb.Id });
 
-        //}
+        // Create Payment Confiramation 
+
+        public IActionResult PaymentConfirmation(int id)
+        {
+            OrderHeader orderHeader = _unitOfWork.OrderHeader.Get(u => u.Id == id, includeproperties: "ApplicationUser");
+
+            if (orderHeader.PaymentStatus == SD.PaymentStatusDelayedPayment)
+            {
+                // then this is order by Company 
+                // we have tp go and retrive the stripe session 
+
+                var service = new SessionService();
+                Session session = service.Get(orderHeader.SessionId);
+                // go to stipe ducumnetetion and check the enum
+                if (session.PaymentStatus.ToLower() == "paid")
+                {
+                    //Here we get the paymentIntenetid
+                    _unitOfWork.OrderHeader.UpdateStripePaymentId(id, session.Id, session.PaymentIntentId);
+                    _unitOfWork.OrderHeader.UpdateStatus(id, orderHeader.OrderStatus, SD.PaymentStatusApproved);
+                    _unitOfWork.Save();
+                }
+            }
+          
+            return View(id);
+        }
+
+
+
+
+        #region API Calls
 
 
 
@@ -373,7 +400,6 @@ namespace BulkyWebBook.Areas.Admin.Controllers
         // If anything want to Retrive the Order --- The we have to retrive the OrderHeader and OrderDetail
         // For That It Crete new model OrderVM --- Who Have the OrderDetail and OrderHeader 
 
-        #region API Calls
 
         // As per status we heve to do filtering so the stats gets in paramentar 
         // After retrive all the order we can add the switch condition and then based on the switch condition we will do the filtering 
