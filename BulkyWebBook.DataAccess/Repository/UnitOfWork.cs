@@ -1,5 +1,6 @@
 ﻿using BulkyWebBook.DataAccess.Data;
 using BulkyWebBook.DataAccess.Repository.IRepository;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,5 +39,11 @@ namespace BulkyWebBook.DataAccess.Repository
         {
             _db.SaveChanges();
         }
+
+        public void Detach<T>(T entity) where T : class
+        {
+            _db.Entry(entity).State = EntityState.Detached;
+        }
     }
 }
+

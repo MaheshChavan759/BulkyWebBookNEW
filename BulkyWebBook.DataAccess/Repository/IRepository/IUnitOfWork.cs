@@ -18,5 +18,7 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
         IOrderHeaderRepository OrderHeader { get; }
 
         void Save();
+
+        void Detach<T>(T entity) where T : class;
     }
 }

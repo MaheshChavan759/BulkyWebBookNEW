@@ -1,6 +1,7 @@
 ﻿using BulkyWebBook.DataAccess.Data;
 using BulkyWebBook.DataAccess.Repository.IRepository;
 using BulkyWebBook.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,11 @@ namespace BulkyWebBook.DataAccess.Repository
         public void update(ShoppingCart obj)
         {
             _db.shoppingCarts.Update(obj);
+        }
+
+        public int Count(Expression<Func<ShoppingCart, bool>> filter)
+        {
+            return _db.Set<ShoppingCart>().Count(filter);
         }
     }
 }

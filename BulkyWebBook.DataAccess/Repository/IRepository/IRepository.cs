@@ -12,20 +12,25 @@ namespace BulkyWebBook.DataAccess.Repository.IRepository
         //T-category 
 
         // For Return All Category 
-        IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter = null,string? includeproperties = null);
+        IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter = null, string? includeproperties = null);
 
         //For Return Single Category 
 
-        T Get(Expression<Func <T, bool > > filter, string? includeproperties = null,bool tracked = false);
+        T Get(Expression<Func<T, bool>> filter, string? includeproperties = null, bool tracked = false);
 
         void Add(T entity);
 
         // update and save changes need to perticular for type like category so not required implement globally.
 
         // void Update(T entity);
-      //  void savechanges();
-        void Remove(T entity); 
+        //  void savechanges();
+        void Remove(T entity);
         void RemoveRange(IEnumerable<T> entity);
+
+
+        void Detach(T entity);
+
+
 
 
 

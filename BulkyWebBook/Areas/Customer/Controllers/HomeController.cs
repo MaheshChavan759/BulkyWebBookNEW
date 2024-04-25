@@ -1,7 +1,9 @@
 using BulkyWebBook.DataAccess.Data;
 using BulkyWebBook.DataAccess.Repository.IRepository;
 using BulkyWebBook.Models;
+using BulkyWebBook.Utility;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Security.Claims;
@@ -23,6 +25,19 @@ namespace BulkyWebBook.Areas.Customer.Controllers
 
         public IActionResult Index()
         {
+
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var ClaimuserId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (ClaimuserId != null)
+            {
+                var cartItems = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == ClaimuserId.Value);
+
+                // Update session variable to reflect the current count of items in the shopping cart
+                HttpContext.Session.SetInt32(SD.SessionCart, cartItems.Count());
+
+            } 
+
             IEnumerable<Product> ProductList  = _unitOfWork.Product.GetAll(includeproperties : "Category");
             return View(ProductList);
         }
@@ -72,15 +87,46 @@ namespace BulkyWebBook.Areas.Customer.Controllers
 
             if (SHOPObj != null)
             {
+
+                // In Shopping Cart Item Exit 
                 SHOPObj.Count += shoppingCart.Count;
                 _unitOfWork.ShoppingCart.update(SHOPObj);
+
             }
             else
             {
+
+                //// Add Element in Shoppping Cart
+                //_unitOfWork.ShoppingCart.Add(shoppingCart);
+                //_unitOfWork.Save();
+
+                ////// Retrieve the count of items in the shopping cart for the current user
+                ////var cartItemCount = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId);
+
+                ////// Update session variable to reflect the current count of items in the shopping cart
+                ////HttpContext.Session.SetInt32(SD.SessionCart, cartItemCount);
+
+
+                //var cartItemCount = _unitOfWork.ShoppingCart.Count(u => u.ApplicationUserId == userId);
+
+                //// Update session variable to reflect the current count of items in the shopping cart
+                //HttpContext.Session.SetInt32(SD.SessionCart, cartItemCount);
+
+
                 _unitOfWork.ShoppingCart.Add(shoppingCart);
+                _unitOfWork.Save();
+
+                // Retrieve all items in the shopping cart for the current user
+                var cartItems = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == userId);
+
+                // Update session variable to reflect the current count of items in the shopping cart
+                HttpContext.Session.SetInt32(SD.SessionCart, cartItems.Count());
+
+
+
             }
             // Save changes to the database
-            _unitOfWork.Save();
+
 
             // Redirect to the index action
             return RedirectToAction(nameof(Index));

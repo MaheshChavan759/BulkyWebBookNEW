@@ -5,6 +5,7 @@ using BulkyWebBook.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Client;
 using SQLitePCL;
 using Stripe;
@@ -228,7 +229,7 @@ namespace BulkyWebBook.Areas.Customer.Controllers
                     Session session = service.Create(options);
 
                     // Update the order with the Stripe Session ID
-                    _unitOfWork.OrderHeader.UpdateStripePaymentId(ShoppingCartVM.OrderHeader.Id, session.Id, session.PaymentIntentId );
+                    _unitOfWork.OrderHeader.UpdateStripePaymentId(ShoppingCartVM.OrderHeader.Id, session.Id, session.PaymentIntentId);
                     _unitOfWork.Save();
 
                     // Redirect to the new URL from the session
@@ -254,18 +255,18 @@ namespace BulkyWebBook.Areas.Customer.Controllers
         public IActionResult OrderConfirmation(int id)
         {
             OrderHeader orderHeader = _unitOfWork.OrderHeader.Get(u => u.Id == id, includeproperties: "ApplicationUser");
-            if(orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
+            if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
             {
                 // then this is order by Customer
                 // we have tp go and retrive the stripe session 
 
                 var service = new SessionService();
                 Session session = service.Get(orderHeader.SessionId);
-               // go to stipe ducumnetetion and check the enum
-                if(session.PaymentStatus.ToLower() =="paid" ) 
+                // go to stipe ducumnetetion and check the enum
+                if (session.PaymentStatus.ToLower() == "paid")
                 {
                     //Here we get the paymentIntenetid
-                    _unitOfWork.OrderHeader.UpdateStripePaymentId(id, session.Id, session.PaymentIntentId );
+                    _unitOfWork.OrderHeader.UpdateStripePaymentId(id, session.Id, session.PaymentIntentId);
                     _unitOfWork.OrderHeader.UpdateStatus(id, SD.StatusApproved, SD.PaymentStatusApproved);
                     _unitOfWork.Save();
                 }
@@ -275,6 +276,8 @@ namespace BulkyWebBook.Areas.Customer.Controllers
             _unitOfWork.Save();
             return View(id);
         }
+
+
         public IActionResult plus(int cartId)
         {
             var carFromDb = _unitOfWork.ShoppingCart.Get(u => u.Id == cartId);
@@ -282,30 +285,78 @@ namespace BulkyWebBook.Areas.Customer.Controllers
             _unitOfWork.ShoppingCart.update(carFromDb);
             _unitOfWork.Save();
             return RedirectToAction(nameof(Index));
+
+
+
+
         }
+
+
+
+
+
+
+
+        //public IActionResult minus(int cartId)
+        //{
+        //    var carFromDb = _unitOfWork.ShoppingCart.Get(u => u.Id == cartId, tracked: true);
+
+        //    if (carFromDb.Count <= 1)
+        //    {
+
+        //        HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart
+        //            .GetAll(u => u.ApplicationUserId == carFromDb.ApplicationUserId).Count() - 1);
+        //        _unitOfWork.ShoppingCart.Remove(carFromDb);
+        //    }
+        //    else
+        //    {
+        //        carFromDb.Count -= 1;
+        //        _unitOfWork.ShoppingCart.update(carFromDb);
+        //    }
+
+        //    _unitOfWork.Save();
+        //    return RedirectToAction(nameof(Index));
+        //}
+
+
+
         public IActionResult minus(int cartId)
         {
             var carFromDb = _unitOfWork.ShoppingCart.Get(u => u.Id == cartId);
 
+            if (carFromDb == null)
+            {
+                return NotFound();
+            }
+
             if (carFromDb.Count <= 1)
             {
                 _unitOfWork.ShoppingCart.Remove(carFromDb);
+                HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart
+             .GetAll(u => u.ApplicationUserId == carFromDb.ApplicationUserId).Count() - 1);
             }
             else
             {
+                // Detach the entity from the context
+                _unitOfWork.Detach(carFromDb);
                 carFromDb.Count -= 1;
                 _unitOfWork.ShoppingCart.update(carFromDb);
             }
-
             _unitOfWork.Save();
             return RedirectToAction(nameof(Index));
         }
+
         public IActionResult remove(int cartId)
         {
             var carFromDb = _unitOfWork.ShoppingCart.Get(u => u.Id == cartId);
 
+         
+
             _unitOfWork.ShoppingCart.Remove(carFromDb);
+            HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart
+             .GetAll(u => u.ApplicationUserId == carFromDb.ApplicationUserId).Count() - 1);
             _unitOfWork.Save();
+
             return RedirectToAction(nameof(Index));
         }
         private double GetPriseBasedOnQuantity(ShoppingCart shoppingCart)
